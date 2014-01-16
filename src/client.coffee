@@ -1065,15 +1065,25 @@ class Dropbox.Client
   #   obtained from a previous call to {Dropbox.Client#pullChanges}, the return
   #   value of {Dropbox.Http.PulledChanges#cursor}, or null / omitted on the
   #   first call to {Dropbox.Client#pullChanges}
+  # @param {String} pathPrefix (optional) if present, this parameter filters
+  #   the response to only include entries at or under the specified path. For
+  #   example, a path_prefix of "/Photos/Vacation" will return entries for the
+  #   path "/Photos/Vacation" and any files and folders under that path. If you
+  #   use the path_prefix parameter, you must continue to pass the same prefix
+  #   on subsequent calls using the returned cursor. 
   # @param {function(Dropbox.ApiError, Dropbox.Http.PulledChanges)} callback
   #   called with the result of the /delta HTTP request; if the call
   #   succeeds, the second parameter is a {Dropbox.Http.PulledChanges}
   #   describing the changes to the user's Dropbox since the pullChanges call
   #   that produced the given cursor, and the first parameter is null
   # @return {XMLHttpRequest} the XHR object used for this API call
-  pullChanges: (cursor, callback) ->
-    if (not callback) and (typeof cursor is 'function')
+  pullChanges: (cursor, pathPrefix, callback) ->
+    if (not callback) and (typeof pathPrefix is 'function')
+      callback = pathPrefix
+      pathPrefix = null
+    else if (not callback) and (not pathPrefix) and (typeof cursor is 'function')
       callback = cursor
+      pathPrefix = null
       cursor = null
 
     if cursor
@@ -1084,6 +1094,9 @@ class Dropbox.Client
     else
       params = {}
 
+    if pathPrefix
+      params.path_prefix = pathPrefix
+
     xhr = new Dropbox.Util.Xhr 'POST', @_urls.delta
     xhr.setParams(params).signWithOauth @_oauth
     @_dispatchXhr xhr, (error, deltaInfo) ->
@@ -1092,8 +1105,8 @@ class Dropbox.Client
   # Alias for "pullChanges" that matches the HTTP API.
   #
   # @see Dropbox.Client#pullChanges
-  delta: (cursor, callback) ->
-    @pullChanges cursor, callback
+  delta: (cursor, pathPrefix, callback) ->
+    @pullChanges cursor, pathPrefix, callback
 
   # Checks whether changes have occurred in a user's Dropbox.
   #
